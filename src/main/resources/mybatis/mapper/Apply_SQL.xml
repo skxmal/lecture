@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.admin.Mapper.ApplyMapper">
+    
+	<!-- 강연정보 리스트 Front -->
+	<select id="selectFrontLectureList" resultType="LectureVO">
+		SELECT 
+	    	LT_IDX
+	    	,LT_NM
+	    	,LT_PLACE
+	    	,DATE_FORMAT(START_DATE, '%Y-%m-%d %H:%i') AS START_DATE
+	    	,MAX_REQ
+	    	,LT_CNN
+	    FROM LECTURE_TB
+	    WHERE START_DATE BETWEEN DATE_ADD(NOW(), INTERVAL-1 DAY) AND DATE_ADD(NOW(), INTERVAL+1 WEEK)
+	    ORDER BY LT_IDX DESC
+	</select>
+    
+    <!-- 강연정보 조회 Front-->
+    <select id="selectFrontLecture" parameterType="ApplyVO" resultType="LectureVO">    
+	    SELECT 
+	    	LT_IDX
+	    	,LT_NM
+	    	,LT_PLACE
+		    ,DATE_FORMAT(START_DATE, '%Y-%m-%d %H:%i') AS START_DATE
+	    	,MAX_REQ
+	    	,LT_CNN
+	    FROM LECTURE_TB
+	    WHERE LT_IDX = #{ltIdx}
+	    AND START_DATE BETWEEN DATE_ADD(NOW(), INTERVAL-1 DAY) AND DATE_ADD(NOW(), INTERVAL+1 WEEK)
+    </select>
+    
+    <!-- 강연 신청 -->
+    <insert id="applyLecture" parameterType="ApplyVO" useGeneratedKeys="true" keyProperty="applyIdx">
+    	INSERT INTO APPLY_TB (
+    		LT_IDX
+    		, EMP_NO
+    		, INST_DATE
+    	) VALUES (
+    		#{ltIdx}
+    		, #{empNo}
+    		, NOW()
+    	)
+    </insert>
+    
+    <!--  강연 신청 여부 -->
+    <select id="selectApplyLectureCnt" resultType="int">
+    	SELECT
+    		COUNT(1) AS CNT
+    	FROM APPLY_TB
+    	WHERE EMP_NO = #{empNo}
+    	AND LT_IDX = #{ltIdx}
+    </select>
+    
+    <!-- 강연 신청 가능여부(신청인원 초과로 불가시 N리턴, 아니면 Y리턴) -->
+    <select id="selectLectureYn" resultType="String">
+    	SELECT
+    		CASE WHEN MAX_REQ > CNT THEN 'Y' ELSE 'N' END AS applyYn
+    	FROM (
+    		SELECT
+	    		A.MAX_REQ
+	    		, (SELECT COUNT(1) FROM APPLY_TB WHERE LT_IDX = A.LT_IDX) AS CNT
+	    	FROM LECTURE_TB A
+	    	WHERE A.LT_IDX = #{ltIdx}
+    	) AA
+    </select>
+    
+    <!-- 신청 목록 조회 -->
+    <select id="selectFrontApplyList" parameterType="ApplyVO" resultType="LectureVO">
+    	SELECT
+    		B.LT_IDX
+	    	, B.LT_NM
+	    	, B.LT_PLACE
+	    	, B.START_DATE
+	    	, B.MAX_REQ
+	    	, B.LT_CNN
+    	FROM APPLY_TB A
+    	INNER JOIN LECTURE_TB B
+    	ON A.LT_IDX = B.LT_IDX
+    	WHERE EMP_NO = #{empNo}
+    </select>
+    
+    <!-- 강연 신청 취소 처리 -->
+    <delete id="applyLectureCancel" parameterType="ApplyVO">
+    	DELETE FROM APPLY_TB
+    	WHERE EMP_NO = #{empNo}
+    	AND LT_IDX = #{ltIdx}
+    </delete>
+    
+    <!-- 실시간 인기 강연 목록(최근 3일간) -->
+    <select id="selectPopularLectureList" resultType="LectureVO">
+    	SELECT
+			LT_IDX
+		 	,LT_NM
+		 	,LT_PLACE
+		 	,START_DATE
+		 	,MAX_REQ
+		 	,LT_CNN
+		FROM (
+			SELECT 
+		    	A.LT_IDX
+		    	,A.LT_NM
+		    	,A.LT_PLACE
+		    	,DATE_FORMAT(A.START_DATE, '%Y-%m-%d %H:%i') AS START_DATE
+		    	,A.MAX_REQ
+		    	,A.LT_CNN
+		    	,COUNT(B.LT_IDX) AS APPLY_CNT
+    			,MAX(B.INST_DATE) AS LAST_APPLY_DATE
+		    FROM LECTURE_TB A 
+		    LEFT OUTER JOIN APPLY_TB B
+		    ON A.LT_IDX = B.LT_IDX
+		    AND B.INST_DATE > DATE_ADD(NOW(), INTERVAL-3 DAY)
+		    WHERE A.START_DATE BETWEEN DATE_ADD(NOW(), INTERVAL-1 DAY) AND DATE_ADD(NOW(), INTERVAL+1 WEEK)
+		    GROUP BY B.LT_IDX
+		) AA
+		ORDER BY AA.APPLY_CNT DESC, AA.LAST_APPLY_DATE DESC
+    </select>
+    
+    <!-- 해당 idx로 인해 강연 신청인원이 초과되었는지 체크 -->
+    <select id="checkMaxReqYn" parameterType="ApplyVO" resultType="String">
+    	SELECT
+    		CASE WHEN (A.MAX_REQ <![CDATA[<]]> COUNT(B.LT_IDX)) AND (#{applyIdx} = MAX(B.APPLY_IDX)) 
+    		THEN 'N' 
+    		ELSE 'Y' END AS CHECK_YN
+    	FROM LECTURE_TB A
+    	INNER JOIN APPLY_TB B
+    	ON A.LT_IDX = B.LT_IDX
+    	WHERE A.LT_IDX = #{ltIdx}
+    	GROUP BY B.LT_IDX
+    </select>
+</mapper>   

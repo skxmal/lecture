@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.admin.Mapper.LectureMapper">
+
+	<!-- 강연정보 리스트 -->
+	<select id="selectLectureList" parameterType="LectureVO" resultType="LectureVO">
+		SELECT 
+	    	LT_IDX
+	    	,LT_NM
+	    	,LT_PLACE
+	    	,DATE_FORMAT(START_DATE, '%Y-%m-%d %H:%i') AS START_DATE
+	    	,MAX_REQ
+	    	,LT_CNN
+	    FROM LECTURE_TB
+	    ORDER BY LT_IDX DESC
+	</select>
+    
+    <!-- 강연정보 조회 -->
+    <select id="selectLecture"  parameterType="LectureVO" resultType="LectureVO">    
+	    SELECT 
+	    	LT_IDX
+	    	,LT_NM
+	    	,LT_PLACE
+		    ,DATE_FORMAT(START_DATE, '%Y-%m-%d %H:%i') AS START_DATE
+	    	,MAX_REQ
+	    	,LT_CNN
+	    FROM LECTURE_TB
+	    WHERE LT_IDX = #{ltIdx}
+    </select>
+    
+    <!-- 강연정보 등록 -->
+    <insert id="insertLecture" parameterType="LectureVO">
+    	INSERT INTO LECTURE_TB(
+	    	LT_NM
+	    	,LT_PLACE
+	    	,START_DATE
+	    	,MAX_REQ
+	    	,LT_CNN
+    	)VALUES(
+    		#{ltNm}
+    		,#{ltPlace}
+    		,#{startDate}
+    		,#{maxReq}
+    		,#{ltCnn}
+    	)
+    	
+    </insert>
+    
+    <!-- 강연정보 수정 -->
+    <insert id="updateLecture" parameterType="LectureVO">
+    	UPDATE LECTURE_TB SET
+	    	LT_NM = #{ltNm}
+	    	,LT_PLACE = #{ltPlace}
+	    	,START_DATE = #{startDate}
+	    	,MAX_REQ = #{maxReq}
+	    	,LT_CNN = #{ltCnn}
+		WHERE LT_IDX = #{ltIdx}
+    </insert>
+    
+    <!-- 강연정보 삭제 -->
+    <delete id="deleteLecture" parameterType="LectureVO">
+    	DELETE FROM LECTURE_TB 
+    	WHERE LT_IDX = #{ltIdx}
+    </delete>
+    
+    <!-- 강연 신청자 목록 조회 -->
+    <select id="selectLectureApplyList" parameterType="LectureVO" resultType="ApplyVO">
+    	SELECT
+    		B.APPLY_IDX
+    		,B.LT_IDX
+    		, B.EMP_NO
+    		, B.INST_DATE
+    	FROM LECTURE_TB A
+    	INNER JOIN APPLY_TB B
+    	ON A.LT_IDX = B.LT_IDX
+    	WHERE A.LT_IDX = #{ltIdx}
+    	ORDER BY B.INST_DATE DESC
+    </select>
+    
+</mapper>   
